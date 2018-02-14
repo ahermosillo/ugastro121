@@ -1,4 +1,7 @@
 import numpy as np
+import matplotlib.pyplot as plt
+import scipy as sp
+import astropy as ap
 import ugradio
 
 def collect_data(v, div, dualmode = True, nbloc = 1, nsamp = 16000,  saveFile = False, fileName = 'data'):
@@ -28,6 +31,36 @@ def collect_data(v, div, dualmode = True, nbloc = 1, nsamp = 16000,  saveFile = 
         print('Saved B port data to {}_B.txt'.format(fileName))
     return [A, B]
 
+def make_complex( nblocs, data = True, v = '1V', div = 1, dualmode = True, nsamp = 16000):
+    ll = ugradio.pico.capture_data(v, divisor = div, dual_mode = dualmode, nsamples = nsamp, nblocks = nblocs)                                                         
+    if not isinstance(data, np.ndarray):                                                                                                                                       
+        data = ll
+    split = np.array(np.split(data, 2*nblocs))
+    real =  np.array(np.arange(0, 2*nblocs)%2, dtype = bool)
+    imag = np.invert(real)
+    return split[real] + 1j*split[imag]
+
+def plot_power(div, N, compData):
+    vsamp = 62.5/div
+    time = np.linspace(-N/2./vsamp, (N/2. - 1)/vsamp,N)
+    freq = np.linspace(-vsamp/2, (vsamp/2)*(1-2./N),N)
+    
+    sum_power = 0
+    for i in range(len(compData)):
+#     freq, notest_fft = ugradio.dft.dft(notest_comp[i][:N], time, freq, vsamp = 62.5)
+        fft_ = np.fft.fft(compData[i][:N])
+        sum_power += abs(fft_)**2
+        power = abs(fft_)**2
+        plt.plot(freq, np.fft.fftshift(power), label = 'block {}'.format(i))
+    plt.plot(freq, np.fft.fftshift(sum_power)/len(compData), label = 'average')
+    plt.xlabel('Frequencies $MHz$')
+    plt.ylabel('Power')
+    
+    print("Sampling at a frequency {}".format(vsamp))
+    print("Sampling with {} number of samples".format(N))
+
+
+"""
 def plot_fft_power(v, div, N, arrA = True, arrB = True, dualmode = True, nbloc = 1, nsamp = 16000, saveFile = False, fileName = 'data'):
 
     '''
@@ -72,3 +105,4 @@ def plot_fft_power(v, div, N, arrA = True, arrB = True, dualmode = True, nbloc =
     axes[1,1].plot(time, arraB[:N], label = 'port B', alpha = 0.5)
 
     return [arrA,arrB]
+"""
