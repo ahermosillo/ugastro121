@@ -31,20 +31,33 @@ def collect_data(v, div, dualmode = True, nbloc = 1, nsamp = 16000,  saveFile = 
         print('Saved B port data to {}_B.txt'.format(fileName))
     return [A, B]
 
-def make_complex( nblocs, data = True, v = '1V', div = 1, dualmode = True, nsamp = 16000):
-    ll = ugradio.pico.capture_data(v, divisor = div, dual_mode = dualmode, nsamples = nsamp, nblocks = nblocs)                                                         
-    if not isinstance(data, np.ndarray):                                                                                                                                       
-        data = ll
+def make_complex(data, nblocs):
     split = np.array(np.split(data, 2*nblocs))
-    real =  np.array(np.arange(0, 2*nblocs)%2, dtype = bool)
+    real =  np.array(np.arange(0, 2*nblocs) >= nblocs, dtype = bool)
     imag = np.invert(real)
     return split[real] + 1j*split[imag]
 
-def plot_power(div, N, compData):
+def avg_power(compData, div, N):
     vsamp = 62.5/div
     time = np.linspace(-N/2./vsamp, (N/2. - 1)/vsamp,N)
     freq = np.linspace(-vsamp/2, (vsamp/2)*(1-2./N),N)
+    sum_power = 0
+    for i in range(len(compData)):
+        fft_ = np.fft.fft(compData[i][:N])
+        sum_power += abs(fft_)**2
+    sum_power = sum_power/len(compData)
+    plt.plot(freq, np.fft.fftshift(sum_power), 'k.-')
+    plt.xlabel('Frequencies MHz')
+    plt.ylabel('Power')
+    plt.grid()
     
+    print("Sampling at a frequency {}".format(vsamp))
+    print("Sampling with {} number of samples".format(N))
+
+def plot_power(compData, div, N):
+    vsamp = 62.5/div
+    time = np.linspace(-N/2./vsamp, (N/2. - 1)/vsamp,N)
+    freq = np.linspace(-vsamp/2, (vsamp/2)*(1-2./N),N)
     sum_power = 0
     for i in range(len(compData)):
 #     freq, notest_fft = ugradio.dft.dft(notest_comp[i][:N], time, freq, vsamp = 62.5)
