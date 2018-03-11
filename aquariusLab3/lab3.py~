@@ -1,0 +1,116 @@
+import numpy as np
+import astropy as ap
+from astropy import units as u
+import matplotli.pyplot as plt
+import ugradio
+import time
+
+ifm = ugradio.interf.Interferometer()
+hpm = ugradio.hp_multi.HP_Multimeter()
+
+def julianDayArray(hrs, dt, initUnixT):
+    """
+    Makes an array of Julian dates for a specified interval
+
+    Arguments:
+    hrs: (float) Number of hours to record Julian dates. Won't get exact 
+    number of hours because length of array will depend on interval time
+    dt: (float) Number of minutes before recording next Julian day
+    initUnixT: (float) Unix time for the first initial Julian day
+
+    Returns:
+    Two arrays: Julian day array with interval dt, Hours array initialized to 0
+
+    """
+    interval = hrs*60./dt
+    secInt = dt*60.
+    jds = []
+    for i in range(int(interval)):
+        jds.append(ugradio.timing.julian_date(initUnixT + secInt*i))
+    # actual julian data to put into alt az functions
+    jds = np.array(jds)
+    # start from 0 and convert to hours for plot
+    jdHrs = (jds - jds[0])*24
+    return jds, jdHrs
+
+
+def findAltAz(ra, dec, jd_array):
+    """
+    Give array of altitude and azimuth given a certain ra, dec and Julian day array
+    
+    Arguments: 
+    ra: (float) ra of source 
+    dec: (float) dec of source
+    jd_array: (ndarray) array of Julian days to get alt and az for 
+
+    Returns:
+    Two arrays. Alt, az
+    """
+    altArr = []
+    azArr = []
+    for j in jd_array:
+        raP, decP = ugradio.coord.precess(ra, dec, jd = j)
+        alt, az = ugradio.coord.get_altaz(raP, decP, jd =j)
+        altArr.append(alt)
+        azArr.append(az)
+    return np.array(altArr), np.array(azArr)
+
+
+def moonAltAz(jd_array):
+    """
+    Gives array of altitude and azimuth of the moon given Julian days (from lat, long of Campbell hall)
+
+    Arguments:
+    jd_array: (ndarray) Julian day array to get alt and az at those times
+
+    Returns:
+    Two Arrays. Alt, Az
+    """
+    altArr = []
+    azArr = []
+    for j in jd_array:
+        raM,decM = ugradio.coord.moonpos(jd = j)
+        alt, az = ugradio.coord.get_altaz(raM, decM, jd = j)
+        altArr.append(alt)
+        azArr.append(az)
+    return np.array(altArr), np.array(azArr)
+
+def sunAltAz(jd_array):
+    """
+    Gives array of altitude and azimuth of the moon given Julian days 
+
+    Arguments: 
+    jd_array: (ndarray) Julian day array to get alt and az at those times
+
+    Returns: 
+    Two arrays. Alt, Az
+    """
+    altArr = []
+    azArr = []
+    for j in jd_array:
+        raS, decS = ugradio.coord.sunpos(jd = j)
+        alt, az = ugradio.coord.get_altaz(raS, decS, jd = j)
+        altArr.append(alt)
+        azArr.append(az)
+    return np.array(altArr), np.array(azArr)
+
+def corrections(altitude, azimuth):
+    """
+    Corrects the altitude and azimuth of source since telescope range is
+    Alt: 5 - 175; Az: 90 - 300
+
+    Arguments:
+    altitude: (ndarray) 
+    azimuth: (ndarray)
+
+    Returns:
+    Two corrected arrays. Alt, Az
+    """
+    for al, az, i in zip(altitude, azimuth, range(len(altitude))):
+        if az < 90:
+            azimuth[i] = az + 180
+            altitude[i] = abs(180 - altitude[i])
+        elif az > 300:
+            azimuth[i] = az - 180
+            altitude[i] = abs(180 - altitude[i])
+    return altitude, azimuth
