@@ -278,6 +278,8 @@ def collect_data_moon(unix,end_t,dt,n,dataFile,pointfileName ):
     np.savez('{}_last'.format(dataFile), vv = vend, ttt = tend) 
     return volts, times
 
+# tested with data_collection above and it also worked. We didn't use it because we
+# were afraid to leave it running for a long time, but it worked for span of minutes!
 
 def set_timer(unix_t, func, *args):
     '''
