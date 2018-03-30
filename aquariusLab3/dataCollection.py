@@ -311,7 +311,8 @@ def set_timer(unix_t, func, *args):
     variable = CustomTimer(sec_till, func, *args)
     variable.start()
     print(variable.join())
-    
+
+# functions used to make plots not to collect data    
 
 def julianDayArray(hrs, dt, initUnixT):
     """
@@ -352,3 +353,5 @@ def getAltAzArray(ra, dec, timeArr):
         altitude.append(alt)
         azimuth.append(az)
     return np.array(altitude), np.array(azimuth)
+
+# functions to analyze data 
